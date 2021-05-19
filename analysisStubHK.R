@@ -4,6 +4,7 @@ library(gsheet)
 
 
 df <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1Q4xJHqa2e_rytQor89S_Bk1ZGHItm7OmFkVIkh8WMio/edit#gid=0")
+load("dfg.rda")
 
 #remove aggrate material
 df<-df[1:32,]
