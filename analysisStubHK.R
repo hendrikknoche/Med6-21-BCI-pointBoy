@@ -10,13 +10,14 @@ load("dfg.rda")
 df<-df[1:32,]
 
 #turn into long format - if you add further columns you need to change the cols (4-11 4:11) accordingly
-df <- df %>% pivot_longer(cols = 4:11, names_to = "Measure")
-df$Measure <- factor(df$Measure)
+df <- df %>% 
+      pivot_longer(cols = 4:11, names_to = "Measure")
+
 df$Measure <- factor(df$Measure)
 
 resbyMeasure <- df %>%
   dplyr::group_by(Measure) %>%
-  dplyr::summarize(mean = mean(value))
+  dplyr::summarize(mean = mean(value,na.rm=TRUE))
 
 resbyMeasureByCondition <- df %>%
   dplyr::group_by(Measure, Condition) %>%
