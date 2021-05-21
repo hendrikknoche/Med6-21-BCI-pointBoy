@@ -4,6 +4,10 @@ library(gsheet)
 library(ggplot2)
 library(coin)
 library(ggpubr)
+library(ggbeeswarm)
+library(gapminder) 
+library(tidyverse) 
+library(ggrepel)
 
 df <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1Q4xJHqa2e_rytQor89S_Bk1ZGHItm7OmFkVIkh8WMio/edit#gid=33771305")
 load("dfg.rda")
@@ -31,35 +35,56 @@ WilcoxonData <- df %>%
   dplyr::rename(Fun = `How much fun were you having in this condition?`) %>%
   dplyr::rename(Control = `I felt I was in control of the tricks and the landing.`)
 
+WilcoxonData$PointBoy <- factor(WilcoxonData$PointBoy)  
+
 conditionOrderData <- df %>%
-  dplyr::select(`Starting Condition`, `How much fun were you having in this condition?`, `I felt I was in control of the tricks and the landing.`) %>%
-  dplyr::rename(Fun = `How much fun were you having in this condition?`) %>%
-  dplyr::rename(Control = `I felt I was in control of the tricks and the landing.`)
+  dplyr::group_by(Participant, `Starting Condition`) %>%
+  dplyr::summarize(
+    AverageControl=mean(`I felt I was in control of the tricks and the landing.`),
+    AverageFun=mean(`How much fun were you having in this condition?`)
+  )
 
+ParticipantGroup <- df %>%
+  dplyr::group_by(Participant, PointBoy, `Starting Condition`) %>%
+  dplyr::summarize(
+    AverageControl=mean(`I felt I was in control of the tricks and the landing.`),
+    AverageFun=mean(`How much fun were you having in this condition?`)
+    )
 
-pointBoyYes <- WilcoxonData %>%
+pointBoyYes <- ParticipantGroup %>%
   dplyr::filter(PointBoy=="Yes")
 
-pointBoyNo <- WilcoxonData %>%
+pointBoyNo <- ParticipantGroup %>%
   dplyr::filter(PointBoy=="No")
 
-medianFunYes <- median(pointBoyYes$Fun, trim=0, na.rm = FALSE)
+wilcoxsign_test(pointBoyNo$`AverageFun` ~ pointBoyYes$`AverageFun`, distribution="exact")
 
-medianFunNo <- median(pointBoyNo$Fun, trim=0, na.rm = FALSE)
+t.test(pointBoyNo$`AverageFun`, pointBoyYes$`AverageFun`, paired = TRUE)
 
-medianControlYes <- median(pointBoyYes$Control, trim=0, na.rm = FALSE)
+wilcoxsign_test(pointBoyNo$`AverageControl` ~ pointBoyYes$`AverageControl`, distribution="exact")
 
-medianControlNo <- median(pointBoyNo$Control, trim=0, na.rm = FALSE)
+medianFunYes <- median(pointBoyYes$AverageFun, trim=0, na.rm = FALSE)
+
+medianFunNo <- median(pointBoyNo$AverageFun, trim=0, na.rm = FALSE)
+
+medianControlYes <- median(pointBoyNo$AverageControl, trim=0, na.rm = FALSE)
+
+medianControlNo <- median(pointBoyNo$AverageControl, trim=0, na.rm = FALSE)
 
 wilcoxsign_test(pointBoyNo$`Fun` ~ pointBoyYes$`Fun`, distribution="exact")
 
 wilcoxsign_test(pointBoyNo$`Control` ~ pointBoyYes$`Control`, distribution="exact")
 
-ggplot(WilcoxonData, aes(x = PointBoy, y = Fun, fill = PointBoy)) + 
-  geom_boxplot()
 
-ggplot(WilcoxonData, aes(x = PointBoy, y = Control, fill = PointBoy)) + 
-  geom_boxplot()
+ggplot(ParticipantGroup, aes(x = PointBoy, y = AverageFun, group=Participant, label=Participant, color = `Starting Condition`)) + 
+  geom_beeswarm(size = 3) +
+  geom_line() +
+  geom_label_repel(aes(label = paste0("Participant ", Participant)),
+                   box.padding   = 0.35, 
+                   point.padding = 0.35,
+                   segment.color = 'grey50',
+                   size = 3) +
+  theme_bw()
 
 condition1Start <- conditionOrderData %>%
   dplyr::filter(`Starting Condition` == "pointBoy")
@@ -77,12 +102,6 @@ medianControl1 <- median(condition1Start$Control, trim=0, na.rm = FALSE)
 
 medianControl2 <- median(condition2Start$Control, trim=0, na.rm = FALSE)
 
-wilcox.test(condition1Start$`Fun`, condition2Start$`Fun`)
+wilcox.test(condition1Start$`AverageFun`, condition2Start$`AverageFun`)
 
-wilcox.test(condition1Start$`Control`, condition2Start$`Control`)
-
-ggplot(conditionOrderData, aes(x = `Starting Condition`, y = Fun, fill = `Starting Condition`)) + 
-  geom_boxplot()
-
-ggplot(conditionOrderData, aes(x = `Starting Condition`, y = Control, fill = `Starting Condition`)) + 
-  geom_boxplot()
+wilcox.test(condition1Start$`AverageControl`, condition2Start$`AverageControl`)
